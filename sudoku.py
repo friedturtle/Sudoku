@@ -172,7 +172,6 @@ def reverse_elimination(r, c, element):
     if counter == 1:
         return 1
     elif sweep_grid:
-        print("SWEEPING GRID")
         # Eliminate the element from all squares in the current G not included in C
         for s in range(0, 3):
             if grid_corner[0] + s == r:
@@ -182,7 +181,7 @@ def reverse_elimination(r, c, element):
                     grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
                 if isinstance(base[grid_checker[0]][grid_checker[1]], list) and element in base[grid_checker[0]][grid_checker[1]]:
                     base[grid_checker[0]][grid_checker[1]].remove(element)
-                    print("ROW Removed: {number} from {spot}".format(number=element, spot=grid_checker))
+                    print("SW GRD ROW Removed: {number} from {spot}".format(number=element, spot=grid_checker))
                     print("Left with: ", base[grid_checker[0]][grid_checker[1]])
                     joke = 0
 
@@ -204,7 +203,6 @@ def reverse_elimination(r, c, element):
     if counter == 1:
         return 1
     elif sweep_grid:
-        print("SWEEPING GRID")
         # Eliminate the element from all squares in the current G not included in R
         for s in range(0, 3):
                 for l in range(0, 3):
@@ -214,7 +212,7 @@ def reverse_elimination(r, c, element):
                         grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
                         if isinstance(base[grid_checker[0]][grid_checker[1]], list) and element in base[grid_checker[0]][grid_checker[1]]:
                             base[grid_checker[0]][grid_checker[1]].remove(element)
-                            print("COL Removed: {number} from {spot} started with r= {row} c = {col}".format(number=element, spot=grid_checker, row=r, col=c))
+                            print(" GRD SWP COL Removed: {number} from {spot} started with r= {row} c = {col}".format(number=element, spot=grid_checker, row=r, col=c))
                             print("Left with: ", base[grid_checker[0]][grid_checker[1]])
 
     # Return true if element occurs only once in grid
@@ -243,8 +241,6 @@ def reverse_elimination(r, c, element):
                         sweep_row = False
                     if grid_checker[1] != col_to_sweep:
                         sweep_col = False
-                        if element == 5:
-                            print("Sweeping col true, (r,c) = ", (r,c), "Counter = ", counter)
     if sweep_col and sweep_row:
         sweep_row = False
         sweep_col = False
@@ -274,6 +270,60 @@ def reverse_elimination(r, c, element):
     return 0
 
 
+def naked_pairs(start_row, start_col):
+    print("RUNNING MATCHING SET")
+    # Check the other squares in the column and grid
+    counter = 0
+    checker = [start_row, start_col]
+    while checker[0] % 3 != 0:
+        checker[0] -= 1
+    for i in range(0,3):
+        if base[checker[0]][checker[1]] == base[start_row][start_col]:
+            counter += 1
+            if counter > length_set:
+                break
+        checker[0] += 1
+    if counter == length_set:
+        checker[0] -= 3
+        # Eliminate the matching set from the rest of the C
+        for set_element in base[start_row][start_col]:
+            for k in range(0, 8):
+                if (k >= checker[0]) and (k <= checker[0] + 2):
+                    pass
+                elif isinstance(base[k][start_col], list) and set_element in base[k][start_col]:
+                    # Eliminate element
+                    base[k][start_col].remove(set_element)
+                    print("Match set COL Removed", set_element, " from", (k, start_col))
+        # Also eliminate from rest of grid
+        return 1
+
+    # Check the other squares in the row and grid
+    counter = 0
+    checker = [start_row, start_col]
+    while checker[1] % 3 != 0:
+        checker[1] -= 1
+    for i in range(0, 3):
+        if base[checker[0]][checker[1]] == base[start_row][start_col]:
+            counter += 1
+            if counter > length_set:
+                break
+        checker[1] += 1
+    if counter == length_set:
+        checker[1] -= 3
+        # Eliminate the matching set from the rest of the C
+        for set_element in base[start_row][start_col]:
+            for l in range(0, 8):
+                if (l >= checker[1]) and (l <= checker[1] + 2):
+                    pass
+                elif isinstance(base[start_row][l], list) and set_element in base[start_row][l]:
+                    # Eliminate element
+                    base[start_row][l].remove(set_element)
+                    print("Match set ROW Removed", set_element, " from", (start_row, l))
+        # Also eliminate from rest of grid
+        return 1
+    return 0
+
+
 def check_empty_squares(filled_squares):
     # Pick a square (that contains a list)
     for row in range(0, 9):
@@ -294,6 +344,11 @@ def check_empty_squares(filled_squares):
                         print("Reverse Elimination Filled", (row, column), "With: ", possibility)
                         # Success! return 1
                         return 1
+                # Call a function to deal with matching sets of 2 or 3 values in the same G and R/C
+                if len(base[row][column]) == 2 or len(base[row][column]) == 3:
+                    # Check for matching sets
+                    naked_pairs(row, column)
+
     return 0
 
 
