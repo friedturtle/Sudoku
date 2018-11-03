@@ -6,13 +6,11 @@ FULL_SET = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 base = [[FULL_SET[:] for i in range(9)] for j in range(9)]
 
 
-def choose_puzzle():
+def choose_puzzle(number):
     # Read the puzzle from a file and generate our initial grid
     confirmed = []
     with open("puzzles.txt") as puzzles:
-        # Ask which puzzle to use
-        print("Choose a puzzle: enter an integer between 1 and 50 inclusive : ")
-        puzzleno = int(input())
+        puzzleno = number
         puzzle_line = (puzzleno - 1) * 10
         row_num = 0
         starting_grid = puzzles.read().splitlines()[puzzle_line:puzzle_line + 10]
@@ -130,7 +128,7 @@ def solve_puzzle(solved_squares):
         debug_counter += 1
         if len(solved_squares) == 81:
             solved = True
-        elif debug_counter > 1500:
+        elif debug_counter > 2500:
             print(base)
             return 0
 
@@ -172,7 +170,6 @@ def reverse_elimination(r, c, element):
     if counter == 1:
         return 1
     elif sweep_grid:
-        print("SWEEPING GRID")
         # Eliminate the element from all squares in the current G not included in C
         for s in range(0, 3):
             if grid_corner[0] + s == r:
@@ -182,7 +179,7 @@ def reverse_elimination(r, c, element):
                     grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
                 if isinstance(base[grid_checker[0]][grid_checker[1]], list) and element in base[grid_checker[0]][grid_checker[1]]:
                     base[grid_checker[0]][grid_checker[1]].remove(element)
-                    print("ROW Removed: {number} from {spot}".format(number=element, spot=grid_checker))
+                    print("SW GRD ROW Removed: {number} from {spot}".format(number=element, spot=grid_checker))
                     print("Left with: ", base[grid_checker[0]][grid_checker[1]])
                     joke = 0
 
@@ -204,7 +201,6 @@ def reverse_elimination(r, c, element):
     if counter == 1:
         return 1
     elif sweep_grid:
-        print("SWEEPING GRID")
         # Eliminate the element from all squares in the current G not included in R
         for s in range(0, 3):
                 for l in range(0, 3):
@@ -214,7 +210,7 @@ def reverse_elimination(r, c, element):
                         grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
                         if isinstance(base[grid_checker[0]][grid_checker[1]], list) and element in base[grid_checker[0]][grid_checker[1]]:
                             base[grid_checker[0]][grid_checker[1]].remove(element)
-                            print("COL Removed: {number} from {spot} started with r= {row} c = {col}".format(number=element, spot=grid_checker, row=r, col=c))
+                            print(" GRD SWP COL Removed: {number} from {spot} started with r= {row} c = {col}".format(number=element, spot=grid_checker, row=r, col=c))
                             print("Left with: ", base[grid_checker[0]][grid_checker[1]])
 
     # Return true if element occurs only once in grid
@@ -243,8 +239,6 @@ def reverse_elimination(r, c, element):
                         sweep_row = False
                     if grid_checker[1] != col_to_sweep:
                         sweep_col = False
-                        if element == 5:
-                            print("Sweeping col true, (r,c) = ", (r,c), "Counter = ", counter)
     if sweep_col and sweep_row:
         sweep_row = False
         sweep_col = False
@@ -274,6 +268,78 @@ def reverse_elimination(r, c, element):
     return 0
 
 
+def naked_pairs(start_row, start_col):
+    # Check the grid for other instances of this pair
+    # Check the whole grid and count
+    counter = 0
+    original_pair = base[start_row][start_col]
+    grid_checker = [start_row, start_col]
+    for m in range(0, 2):
+        while grid_checker[m] % 3 != 0:
+            grid_checker[m] -= 1
+    grid_corner = grid_checker[:]
+    for s in range(0, 3):
+        for l in range(0, 3):
+            grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
+            pair_candidate = base[grid_checker[0]][grid_checker[1]]
+            if isinstance(pair_candidate, list) and pair_candidate == original_pair:
+                counter += 1
+    # If we have a naked pair in the grid then remove the elements in the pair from other lists in the grid
+    if counter == 2:
+        for s in range(0, 3):
+            for l in range(0, 3):
+                grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
+                square_candidates = base[grid_checker[0]][grid_checker[1]]
+                if square_candidates != original_pair:
+                    for pair_value in original_pair:
+                        if isinstance(square_candidates, list) and pair_value in square_candidates:
+                            square_candidates.remove(pair_value)
+                            print("NAKED grid removed", pair_value, "from", grid_checker, "left with", square_candidates)
+    # Now check the entire row for instances of this pair
+    counter = 0
+    grid_checker = [start_row, 0]
+    for i in range(0, 9):
+        grid_checker[1] = i
+        pair_candidate = base[grid_checker[0]][grid_checker[1]]
+        if isinstance(pair_candidate, list) and pair_candidate == original_pair:
+            counter += 1
+    # If we have a naked pair in the row then remove the elements of the pair from other lists in the row
+    if counter == 2:
+        grid_checker = [start_row, 0]
+        for i in range(0, 9):
+            grid_checker[1] = i
+            square_candidates = base[grid_checker[0]][grid_checker[1]]
+            if square_candidates != original_pair:
+                for pair_value in original_pair:
+                    if isinstance(square_candidates, list) and pair_value in square_candidates:
+                        square_candidates.remove(pair_value)
+                        print("NAKED row removed", pair_value, "from", grid_checker, "left with", square_candidates)
+
+    # Check the entire column for instances of this pair
+    counter = 0
+    grid_checker = [0, start_col]
+    for i in range(0, 9):
+        grid_checker[0] = i
+        pair_candidate = base[grid_checker[0]][grid_checker[1]]
+        if isinstance(pair_candidate, list) and pair_candidate == original_pair:
+            counter += 1
+    # If we have a naked pair in the column then remove the elements of the pair from other lists in the column
+    if counter == 2:
+        grid_checker = [0, start_col]
+        for i in range(0, 9):
+            grid_checker[0] = i
+            square_candidates = base[grid_checker[0]][grid_checker[1]]
+            if square_candidates != original_pair:
+                for pair_value in original_pair:
+                    if isinstance(square_candidates, list) and pair_value in square_candidates:
+                        square_candidates.remove(pair_value)
+                        print("NAKED col removed", pair_value, "from", grid_checker, "left with", square_candidates)
+
+
+def hidden_pairs():
+    # Check the whole board for hidden pairs
+
+
 def check_empty_squares(filled_squares):
     # Pick a square (that contains a list)
     for row in range(0, 9):
@@ -294,6 +360,11 @@ def check_empty_squares(filled_squares):
                         print("Reverse Elimination Filled", (row, column), "With: ", possibility)
                         # Success! return 1
                         return 1
+                # Call a function to deal with matching sets of 2 or 3 values in the same G and R/C
+                if len(base[row][column]) == 2:
+                    # Check for matching sets
+                    naked_pairs(row, column)
+
     return 0
 
 
@@ -311,9 +382,19 @@ def user_puzzle():
 
 
 def main():
-    (confirmed, puzzleno) = choose_puzzle()
-    solve_puzzle(confirmed)
-    write_puzzle(puzzleno)
+    print("Choose which puzzle to solve (1-50). Enter 0 to solve all puzzles.")
+    chosen_number = int(input())
+    if chosen_number == 0:
+        for i in range(1, 51):
+            global base
+            base = base = [[FULL_SET[:] for k in range(9)] for j in range(9)]
+            (confirmed, puzzle_num) = choose_puzzle(i)
+            solve_puzzle(confirmed)
+            write_puzzle(puzzle_num)
+    else:
+        (confirmed, puzzle_num) = choose_puzzle(chosen_number)
+        solve_puzzle(confirmed)
+        write_puzzle(puzzle_num)
 
 
 main()
