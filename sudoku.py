@@ -35,7 +35,7 @@ def solve_puzzle(solved_squares):
 
     while not solved:
         for pos in solved_squares:
-            print("Pos = ", pos)
+            ####print("Pos = ", pos)
             debug_counter += 1
             try:
                 value = int(base[pos[0]][pos[1]])
@@ -126,6 +126,9 @@ def solve_puzzle(solved_squares):
         check_empty_squares(solved_squares)
         # This will stop when it confirms one space
         debug_counter += 1
+        if debug_counter % 10 == 0:
+            hidden_pairs()
+
         if len(solved_squares) == 81:
             solved = True
         elif debug_counter > 2500:
@@ -337,7 +340,269 @@ def naked_pairs(start_row, start_col):
 
 
 def hidden_pairs():
+    # Check each row of the base for hidden pairs
+    for i in range(0, 9):
+        # Each list in the list represents an element 1,2,3... the values note the positions it occurs
+        counting_elements = [[], [], [], [], [], [], [], [], []]
+        twice_indexes = []
+        for k in range(0, 9):
+            if isinstance(base[i][k], list):
+                if len(base[i][k]) == 1:
+                    return 1
+                else:
+                    for candidate in base[i][k]:
+                        counting_elements[candidate - 1].append(k)
+        # Before we move to the next row resolve any hidden pairs
+        for m in range(0, 9):
+            if len(counting_elements[m]) == 2:
+                # Save this for future comparison
+                twice_indexes.append(m)
+        # Now compare the positions of the candidates that appear only twice
+        for n in range(0, len(twice_indexes) - 1):
+            for v in range(n + 1, len(twice_indexes)):
+                if counting_elements[n] == counting_elements[v]:
+                    # Remove all but (n + 1) and (v + 1) from those spots
+                    for col_pos in counting_elements[n]:
+                        for candidate in base[i][col_pos]:
+                            if candidate != (n + 1) and candidate != (v + 1):
+                                base[i][col_pos].remove(candidate)
+                                print("HIDDEN Row removed: ", candidate, "from: ", [i, col_pos], " left with: ", base[i][col_pos])
+                                print("Hidden pair is: ", (n + 1, v + 1))
+    # Check each column of the base for hidden pairs
+    for k in range(0, 9):
+        # Each list in the list represents an element 1,2,3... the values note the positions it occurs
+        counting_elements = [[], [], [], [], [], [], [], [], []]
+        twice_indexes = []
+        for i in range(0, 9):
+            if isinstance(base[i][k], list):
+                if len(base[i][k]) == 1:
+                    return 1
+                else:
+                    for candidate in base[i][k]:
+                        counting_elements[candidate - 1].append(i)
+        # Before we move to the next row resolve any hidden pairs
+        for m in range(0, 9):
+            if len(counting_elements[m]) == 2:
+                # Save this for future comparison
+                twice_indexes.append(m)
+        # Now compare the positions of the candidates that appear only twice
+        for n in range(0, len(twice_indexes) - 1):
+            for v in range(n + 1, len(twice_indexes)):
+                if counting_elements[n] == counting_elements[v]:
+                    # Remove all but (n + 1) and (v + 1) from those spots
+                    for row_pos in counting_elements[n]:
+                        for candidate in base[row_pos][k]:
+                            if candidate != (n + 1) and candidate != (v + 1):
+                                base[row_pos][k].remove(candidate)
+                                print("HIDDEN Col removed: ", candidate, "from: ", [row_pos, k], " left with: ", base[row_pos][k])
+                                print("Hidden pair is: ", (n + 1, v + 1))
+                                print("Counting elements: ", counting_elements)
+    # Check each grid in the base for hidden pairs
+    #TREK
+    grid_corner = [-1, -1]
+    for s in range(0, 3):
+        grid_corner[0] = s * 3
+        for l in range(0, 3):
+            grid_corner[1] = l * 3
+            # Grid corner chosen, now start counting candidate occurances
+            counting_elements = [[], [], [], [], [], [], [], [], []]
+            twice_indexes = []
+            grid_checker = [0, 0]
+            for r in range(grid_corner[0], grid_corner[0] + 3):
+                grid_checker[0] = r
+                for c in range(grid_corner[1], grid_corner[1] + 3):
+                    grid_checker[1] = c
+                    if isinstance(base[r][c], list):
+                        if len(base[r][c]) == 1:
+                            return 1
+                        else:
+                            for candidate in base[r][c]:
+                                counting_elements[candidate - 1].append((r, c))
+            # Before we move to the next grid resolve any hidden pairs
+            for m in range(0, 9):
+                if len(counting_elements[m]) == 2:
+                    # Save this for future comparison
+                    twice_indexes.append(m)
+            # Now compare the positions of the candidates that appear only twice
+            for n in range(0, len(twice_indexes) - 1):
+                for v in range(n + 1, len(twice_indexes)):
+                    if counting_elements[n] == counting_elements[v]:
+                        # Remove all but (n + 1) and (v + 1) from those spots
+                        for grid_pos in counting_elements[n]:
+                            for candidate in base[grid_pos[0]][grid_pos[1]]:
+                                if candidate != (n + 1) and candidate != (v + 1):
+                                    base[grid_pos[0]][grid_pos[1]].remove(candidate)
+                                    print("HIDDEN Grid removed: ", candidate, "from: ", grid_pos, " left with: ", base[grid_pos[0]][grid_pos[1]])
+
+
+def old_hidden_pairs():
     # Check the whole board for hidden pairs
+
+    # Check the row for hidden pairs
+    for i in range(0, 9):
+        for k in range(0, 8):
+            found_hidden_pair = False
+            starting_square = base[i][k]
+            pair_match_position = [-1, -1]
+            # i = row, k = column
+            # For each candidate in our starting square, find the next square in the row where it occurs
+            if isinstance(starting_square, list) and len(starting_square) > 2:
+                for candidate in starting_square:
+                    pair_match_count = 0
+                    for h in range(k + 1, 9):
+                        candidate_match_count = 0
+                        matching_candidates = []
+                        testing_square = base[i][h]
+                        if pair_match_position != [i, h]:
+                            if isinstance(testing_square, list) and len(testing_square) > 1:
+                                if candidate in testing_square:
+                                    # Need to find another match
+                                    for second_candidate in starting_square:
+                                        if second_candidate != candidate:
+                                            if second_candidate in testing_square:
+                                                candidate_match_count += 1
+                                                matching_candidates = [candidate, second_candidate]
+                                            else:
+                                                pass
+                                    if candidate_match_count == 1:
+                                        pair_match_count += 1
+                                        pair_match_position = [i, h]
+                                        if pair_match_count > 1:
+                                            found_hidden_pair = False
+                                            matching_candidates = []
+                                        else:
+                                            found_hidden_pair = True
+
+                                else:
+                                    pass
+            # If hidden pair, remove all other candidates from the pair squares
+            if found_hidden_pair:
+                for element in starting_square:
+                    if element not in matching_candidates:
+                        starting_square.remove(element)
+                        print("HIDDEN Row removed", element, " from: ", [i, k], " left with: ", starting_square)
+                for element in base[pair_match_position[0]][pair_match_position[1]]:
+                    if element not in matching_candidates:
+                        base[pair_match_position[0]][pair_match_position[1]].remove(element)
+                        print("HIDDEN Row2 removed", element, " from: ", pair_match_position, " left with: ", base[pair_match_position[0]][pair_match_position[1]])
+                found_hidden_pair = False
+
+    # Check columns for hidden pairs
+    for k in range(0, 9):
+        for i in range(0, 8):
+            starting_square = base[i][k]
+            pair_match_position = [-1, -1]
+            found_hidden_pair = False
+            # i = row, k = column
+            # For each candidate in our starting square, find the next square in the column where it occurs
+            if isinstance(starting_square, list) and len(starting_square) > 1:
+                for candidate in starting_square:
+                    pair_match_count = 0
+                    for h in range(i + 1, 9):
+                        candidate_match_count = 0
+                        matching_candidates = []
+                        testing_square = base[h][k]
+                        if pair_match_position != [h, k]:
+                            if isinstance(testing_square, list) and len(testing_square) > 1:
+                                if candidate in testing_square:
+                                    candidate_match_count += 1
+                                    # Need to find another match
+                                    for second_candidate in starting_square:
+                                        if second_candidate != candidate:
+                                            if second_candidate in testing_square:
+                                                candidate_match_count += 1
+                                                matching_candidates = [candidate, second_candidate]
+                                            else:
+                                                pass
+                                    if candidate_match_count == 1:
+                                        pair_match_count += 1
+                                        pair_match_position = [h, k]
+                                        if pair_match_count > 1:
+                                            found_hidden_pair = False
+                                            matching_candidates = []
+                                        else:
+                                            found_hidden_pair = True
+
+                                else:
+                                    pass
+            # If hidden pair, remove all other candidates from the pair squares
+            if found_hidden_pair:
+                for element in starting_square:
+                    if element not in matching_candidates:
+                        starting_square.remove(element)
+                        print("HIDDEN Column removed", element, " from: ", [i, k], " left with: ", starting_square)
+                for element in base[pair_match_position[0]][pair_match_position[1]]:
+                    if element not in matching_candidates:
+                        base[pair_match_position[0]][pair_match_position[1]].remove(element)
+                        print("HIDDEN Column2 removed", element, " from: ", pair_match_position, " Left with:", base[pair_match_position[0]][pair_match_position[1]])
+                found_hidden_pair = False
+
+    # Check grids
+    # Start by defining a grid corner
+    grid_corner = [-1, -1]
+    for s in range(0, 3):
+        grid_corner[0] = s * 3
+        for l in range(0, 3):
+            grid_corner[1] = l * 3
+            # Grid corner chosen, now begin testing
+            starting_grid_checker = grid_corner[:]
+            for i in range(0, 3):
+                starting_grid_checker[0] = grid_corner[0] + i
+                for k in range(0, 3):
+                    starting_grid_checker[1] = grid_corner[1] + k
+                    starting_square = base[starting_grid_checker[0]][starting_grid_checker[1]]
+                    pair_match_position = [-1, -1]
+                    found_hidden_pair = False
+                    if starting_square == [grid_corner[0] + 2, grid_corner[1] + 2]:
+                        # Already done testing
+                        pass
+                    elif isinstance(starting_square, list) and len(starting_square) > 1:
+                        for candidate in starting_square:
+                            pair_match_count = 0
+                            # Traverse the grid forwards testing squares
+                            for r in range(starting_grid_checker[0], grid_corner[0] + 3):
+                                if r == starting_grid_checker[0]:
+                                    start_range = starting_grid_checker[1]
+                                else:
+                                    start_range = grid_corner[1]
+                                for c in range(start_range, grid_corner[1] + 3):
+                                    testing_square = base[r][c]
+                                    candidate_match_count = 0
+                                    matching_candidates = []
+                                    if pair_match_position != [r, c]:
+                                        if isinstance(testing_square, list) and len(testing_square) > 1:
+                                            if candidate in testing_square:
+                                                candidate_match_count += 1
+                                                # Need to find another match
+                                                for second_candidate in starting_square:
+                                                    if second_candidate != candidate:
+                                                        if second_candidate in testing_square:
+                                                            candidate_match_count += 1
+                                                            matching_candidates = [candidate, second_candidate]
+                                                        else:
+                                                            pass
+                                                if candidate_match_count == 1:
+                                                    pair_match_count += 1
+                                                    pair_match_position = [r, c]
+                                                    if pair_match_count > 1:
+                                                        found_hidden_pair = False
+                                                        matching_candidates = []
+                                                    else:
+                                                        found_hidden_pair = True
+                                            else:
+                                                pass
+                    if found_hidden_pair:
+                        # If hidden pair, remove all other candidates from the pair squares
+                        for element in starting_square:
+                            if element not in matching_candidates:
+                                starting_square.remove(element)
+                                print("HIDDEN Grid removed", element, " from: ", starting_grid_checker, " left with: ", starting_square)
+                        for element in base[pair_match_position[0]][pair_match_position[1]]:
+                            if element not in matching_candidates:
+                                base[pair_match_position[0]][pair_match_position[1]].remove(element)
+                                print("HIDDEN Grid2 removed", element, " from: ", pair_match_position, " Left with:",
+                                      base[pair_match_position[0]][pair_match_position[1]])
+                        found_hidden_pair = False
 
 
 def check_empty_squares(filled_squares):
@@ -349,7 +614,7 @@ def check_empty_squares(filled_squares):
                     base[row][column] = base[row][column][0]
                     filled_squares.append((row, column))
                     print("confirming single value list pos = ", (row, column), "value = ", base[row][column])
-                    continue
+                    return 1
                 # Determine if each possibility occurs only once in R/C/G
                 for possibility in base[row][column]:
                     # Reverse eliminate
