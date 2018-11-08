@@ -126,12 +126,17 @@ def solve_puzzle(solved_squares):
         check_empty_squares(solved_squares)
         # This will stop when it confirms one space
         debug_counter += 1
+        if debug_counter % 5 == 0:
+            naked_sets()
+
+
         if debug_counter % 10 == 0:
             hidden_pairs()
 
         if len(solved_squares) == 81:
             solved = True
         elif debug_counter > 2500:
+            print("DEBUG COUNTER")
             print(base)
             return 0
 
@@ -271,72 +276,126 @@ def reverse_elimination(r, c, element):
     return 0
 
 
-def naked_pairs(start_row, start_col):
-    # Check the grid for other instances of this pair
-    # Check the whole grid and count
-    counter = 0
-    original_pair = base[start_row][start_col]
-    grid_checker = [start_row, start_col]
-    for m in range(0, 2):
-        while grid_checker[m] % 3 != 0:
-            grid_checker[m] -= 1
-    grid_corner = grid_checker[:]
-    for s in range(0, 3):
-        for l in range(0, 3):
-            grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
-            pair_candidate = base[grid_checker[0]][grid_checker[1]]
-            if isinstance(pair_candidate, list) and pair_candidate == original_pair:
-                counter += 1
-    # If we have a naked pair in the grid then remove the elements in the pair from other lists in the grid
-    if counter == 2:
-        for s in range(0, 3):
-            for l in range(0, 3):
-                grid_checker = [grid_corner[0] + s, grid_corner[1] + l]
-                square_candidates = base[grid_checker[0]][grid_checker[1]]
-                if square_candidates != original_pair:
-                    for pair_value in original_pair:
-                        if isinstance(square_candidates, list) and pair_value in square_candidates:
-                            square_candidates.remove(pair_value)
-                            print("NAKED grid removed", pair_value, "from", grid_checker, "left with", square_candidates)
-    # Now check the entire row for instances of this pair
-    counter = 0
-    grid_checker = [start_row, 0]
+def naked_sets():
+    # Check the entire base for naked pairs, triples and quads
+    # This doesnt account for disjointed naked sets
+    # Check rows
     for i in range(0, 9):
-        grid_checker[1] = i
-        pair_candidate = base[grid_checker[0]][grid_checker[1]]
-        if isinstance(pair_candidate, list) and pair_candidate == original_pair:
-            counter += 1
-    # If we have a naked pair in the row then remove the elements of the pair from other lists in the row
-    if counter == 2:
-        grid_checker = [start_row, 0]
+        # Store the positions where the number of candidates is 4,3,2
+        pos_of_lengths = [[], [], []]
+        for k in range(0, 9):
+            if isinstance(base[i][k], list) and 2 <= len(base[i][k]) <= 4:
+                number_candidates = len(base[i][k])
+                # To assign to correct index idx = - length + 4
+                length_index = 4 - number_candidates
+                pos_of_lengths[length_index].append(k)
+        # Check if there are enough of the right length to resolve naked sets
+        for m in range(0, 3):
+            match_count = 0
+            if len(pos_of_lengths[m]) == 4 - m:
+                # Test if they are matching sets
+                sets_already_tested = []
+                for test_col_pos in pos_of_lengths[m]:
+                    test_set = base[i][test_col_pos]
+                    if test_set not in sets_already_tested:
+                        for col_pos in pos_of_lengths[m]:
+                            if base[i][col_pos] == test_set:
+                                match_count += 1
+                                if match_count == 4 - m:
+                                    # We have a naked set. Resolve it and edit pos of lengths
+                                    for k in range(0, 9):
+                                        if isinstance(base[i][k], list) and base[i][k] != test_set:
+                                            for candidate in test_set:
+                                                if candidate in base[i][k]:
+                                                    if 2 <= len(base[i][k]) <= 4:
+                                                        pos_of_lengths[4 - len(base[i][k])].remove(k)
+                                                        if len(base[i][k]) > 2:
+                                                            pos_of_lengths[5 - len(base[i][k])].append(k)
+                                                    base[i][k].remove(candidate)
+                                                    if len(base[i][k]) == 4:
+                                                        pos_of_lengths[0].append(k)
+                                                    print("NAKED row removed", candidate, "from", [i, k], "left with",
+                                                          base[i][k])
+                                                    print(pos_of_lengths)
+                            else:
+                                pass
+                        sets_already_tested.append(test_set)
+                        match_count = 0
+    # Check columns
+    for k in range(0, 9):
+        # Store the positions where the number of candidates is 4,3,2
+        pos_of_lengths = [[], [], []]
         for i in range(0, 9):
-            grid_checker[1] = i
-            square_candidates = base[grid_checker[0]][grid_checker[1]]
-            if square_candidates != original_pair:
-                for pair_value in original_pair:
-                    if isinstance(square_candidates, list) and pair_value in square_candidates:
-                        square_candidates.remove(pair_value)
-                        print("NAKED row removed", pair_value, "from", grid_checker, "left with", square_candidates)
+            if isinstance(base[i][k], list) and 2 <= len(base[i][k]) <= 4:
+                number_candidates = len(base[i][k])
+                # To assign to correct index idx = - length + 4
+                length_index = 4 - number_candidates
+                pos_of_lengths[length_index].append(i)
+        # Check if there are enough of the right length to resolve naked sets
+        for m in range(0, 3):
+            match_count = 0
+            if len(pos_of_lengths[m]) == 4 - m:
+                sets_already_tested = []
+                # Test if they are matching sets
+                for test_row_pos in pos_of_lengths[m]:
+                    test_set = base[test_row_pos][k]
+                    if test_set not in sets_already_tested:
+                        for row_pos in pos_of_lengths[m]:
+                            if base[row_pos][k] == test_set:
+                                match_count += 1
+                                if match_count == 4 - m:
+                                    # We have a naked set. Resolve it and end the function
+                                    for i in range(0, 9):
+                                        if isinstance(base[i][k], list) and base[i][k] != test_set:
+                                            for candidate in test_set:
+                                                if candidate in base[i][k]:
+                                                    base[i][k].remove(candidate)
+                                                    print("NAKED col removed", candidate, "from", [i, k], "left with",
+                                                          base[i][k])
+                                    return 1
+                            else:
+                                pass
+                    sets_already_tested.append(test_set)
+                    match_count = 0
 
-    # Check the entire column for instances of this pair
-    counter = 0
-    grid_checker = [0, start_col]
-    for i in range(0, 9):
-        grid_checker[0] = i
-        pair_candidate = base[grid_checker[0]][grid_checker[1]]
-        if isinstance(pair_candidate, list) and pair_candidate == original_pair:
-            counter += 1
-    # If we have a naked pair in the column then remove the elements of the pair from other lists in the column
-    if counter == 2:
-        grid_checker = [0, start_col]
-        for i in range(0, 9):
-            grid_checker[0] = i
-            square_candidates = base[grid_checker[0]][grid_checker[1]]
-            if square_candidates != original_pair:
-                for pair_value in original_pair:
-                    if isinstance(square_candidates, list) and pair_value in square_candidates:
-                        square_candidates.remove(pair_value)
-                        print("NAKED col removed", pair_value, "from", grid_checker, "left with", square_candidates)
+    # Check grids
+    grid_corner = [-1, -1]
+    for s in range(0, 3):
+        grid_corner[0] = s * 3
+        for l in range(0, 3):
+            grid_corner[1] = l * 3
+            # Grid corner chosen, now start counting candidate occurances
+            pos_of_lengths = [[], [], []]
+            for r in range(grid_corner[0], grid_corner[0] + 3):
+                for c in range(grid_corner[1], grid_corner[1] + 3):
+                    if isinstance(base[r][c], list) and 2 <= len(base[r][c]) <= 4:
+                        number_candidates = len(base[r][c])
+                        length_index = 4 - number_candidates
+                        pos_of_lengths[length_index].append([r, c])
+            # Check if there are enough of the right length to form naked sets
+            for m in range(0, 3):
+                match_count = 0
+                if len(pos_of_lengths[m]) == 4 - m:
+                    sets_already_tested = []
+                    for test_grid_pos in pos_of_lengths[m]:
+                        test_set = base[test_grid_pos[0]][test_grid_pos[1]]
+                        if test_set not in sets_already_tested:
+                            for grid_pos in pos_of_lengths[m]:
+                                if base[grid_pos[0]][grid_pos[1]] == test_set:
+                                    match_count += 1
+                                    if match_count == 4 - m:
+                                        # We have a naked set. Resolve it and end the function
+                                        for r in range(grid_corner[0], grid_corner[0] + 3):
+                                            for c in range(grid_corner[1], grid_corner[1] + 3):
+                                                if isinstance(base[r][c], list) and base[r][c] != test_set:
+                                                    for candidate in test_set:
+                                                        if candidate in base[r][c]:
+                                                            base[r][c].remove(candidate)
+                                                            print("NAKED grid removed", candidate, "from", [r, c], "left with",
+                                                                  base[r][c])
+
+                        sets_already_tested.append(test_set)
+                        match_count = 0
 
 
 def hidden_pairs():
@@ -398,7 +457,6 @@ def hidden_pairs():
                                 print("Hidden pair is: ", (n + 1, v + 1))
                                 print("Counting elements: ", counting_elements)
     # Check each grid in the base for hidden pairs
-    #TREK
     grid_corner = [-1, -1]
     for s in range(0, 3):
         grid_corner[0] = s * 3
@@ -435,176 +493,6 @@ def hidden_pairs():
                                     print("HIDDEN Grid removed: ", candidate, "from: ", grid_pos, " left with: ", base[grid_pos[0]][grid_pos[1]])
 
 
-def old_hidden_pairs():
-    # Check the whole board for hidden pairs
-
-    # Check the row for hidden pairs
-    for i in range(0, 9):
-        for k in range(0, 8):
-            found_hidden_pair = False
-            starting_square = base[i][k]
-            pair_match_position = [-1, -1]
-            # i = row, k = column
-            # For each candidate in our starting square, find the next square in the row where it occurs
-            if isinstance(starting_square, list) and len(starting_square) > 2:
-                for candidate in starting_square:
-                    pair_match_count = 0
-                    for h in range(k + 1, 9):
-                        candidate_match_count = 0
-                        matching_candidates = []
-                        testing_square = base[i][h]
-                        if pair_match_position != [i, h]:
-                            if isinstance(testing_square, list) and len(testing_square) > 1:
-                                if candidate in testing_square:
-                                    # Need to find another match
-                                    for second_candidate in starting_square:
-                                        if second_candidate != candidate:
-                                            if second_candidate in testing_square:
-                                                candidate_match_count += 1
-                                                matching_candidates = [candidate, second_candidate]
-                                            else:
-                                                pass
-                                    if candidate_match_count == 1:
-                                        pair_match_count += 1
-                                        pair_match_position = [i, h]
-                                        if pair_match_count > 1:
-                                            found_hidden_pair = False
-                                            matching_candidates = []
-                                        else:
-                                            found_hidden_pair = True
-
-                                else:
-                                    pass
-            # If hidden pair, remove all other candidates from the pair squares
-            if found_hidden_pair:
-                for element in starting_square:
-                    if element not in matching_candidates:
-                        starting_square.remove(element)
-                        print("HIDDEN Row removed", element, " from: ", [i, k], " left with: ", starting_square)
-                for element in base[pair_match_position[0]][pair_match_position[1]]:
-                    if element not in matching_candidates:
-                        base[pair_match_position[0]][pair_match_position[1]].remove(element)
-                        print("HIDDEN Row2 removed", element, " from: ", pair_match_position, " left with: ", base[pair_match_position[0]][pair_match_position[1]])
-                found_hidden_pair = False
-
-    # Check columns for hidden pairs
-    for k in range(0, 9):
-        for i in range(0, 8):
-            starting_square = base[i][k]
-            pair_match_position = [-1, -1]
-            found_hidden_pair = False
-            # i = row, k = column
-            # For each candidate in our starting square, find the next square in the column where it occurs
-            if isinstance(starting_square, list) and len(starting_square) > 1:
-                for candidate in starting_square:
-                    pair_match_count = 0
-                    for h in range(i + 1, 9):
-                        candidate_match_count = 0
-                        matching_candidates = []
-                        testing_square = base[h][k]
-                        if pair_match_position != [h, k]:
-                            if isinstance(testing_square, list) and len(testing_square) > 1:
-                                if candidate in testing_square:
-                                    candidate_match_count += 1
-                                    # Need to find another match
-                                    for second_candidate in starting_square:
-                                        if second_candidate != candidate:
-                                            if second_candidate in testing_square:
-                                                candidate_match_count += 1
-                                                matching_candidates = [candidate, second_candidate]
-                                            else:
-                                                pass
-                                    if candidate_match_count == 1:
-                                        pair_match_count += 1
-                                        pair_match_position = [h, k]
-                                        if pair_match_count > 1:
-                                            found_hidden_pair = False
-                                            matching_candidates = []
-                                        else:
-                                            found_hidden_pair = True
-
-                                else:
-                                    pass
-            # If hidden pair, remove all other candidates from the pair squares
-            if found_hidden_pair:
-                for element in starting_square:
-                    if element not in matching_candidates:
-                        starting_square.remove(element)
-                        print("HIDDEN Column removed", element, " from: ", [i, k], " left with: ", starting_square)
-                for element in base[pair_match_position[0]][pair_match_position[1]]:
-                    if element not in matching_candidates:
-                        base[pair_match_position[0]][pair_match_position[1]].remove(element)
-                        print("HIDDEN Column2 removed", element, " from: ", pair_match_position, " Left with:", base[pair_match_position[0]][pair_match_position[1]])
-                found_hidden_pair = False
-
-    # Check grids
-    # Start by defining a grid corner
-    grid_corner = [-1, -1]
-    for s in range(0, 3):
-        grid_corner[0] = s * 3
-        for l in range(0, 3):
-            grid_corner[1] = l * 3
-            # Grid corner chosen, now begin testing
-            starting_grid_checker = grid_corner[:]
-            for i in range(0, 3):
-                starting_grid_checker[0] = grid_corner[0] + i
-                for k in range(0, 3):
-                    starting_grid_checker[1] = grid_corner[1] + k
-                    starting_square = base[starting_grid_checker[0]][starting_grid_checker[1]]
-                    pair_match_position = [-1, -1]
-                    found_hidden_pair = False
-                    if starting_square == [grid_corner[0] + 2, grid_corner[1] + 2]:
-                        # Already done testing
-                        pass
-                    elif isinstance(starting_square, list) and len(starting_square) > 1:
-                        for candidate in starting_square:
-                            pair_match_count = 0
-                            # Traverse the grid forwards testing squares
-                            for r in range(starting_grid_checker[0], grid_corner[0] + 3):
-                                if r == starting_grid_checker[0]:
-                                    start_range = starting_grid_checker[1]
-                                else:
-                                    start_range = grid_corner[1]
-                                for c in range(start_range, grid_corner[1] + 3):
-                                    testing_square = base[r][c]
-                                    candidate_match_count = 0
-                                    matching_candidates = []
-                                    if pair_match_position != [r, c]:
-                                        if isinstance(testing_square, list) and len(testing_square) > 1:
-                                            if candidate in testing_square:
-                                                candidate_match_count += 1
-                                                # Need to find another match
-                                                for second_candidate in starting_square:
-                                                    if second_candidate != candidate:
-                                                        if second_candidate in testing_square:
-                                                            candidate_match_count += 1
-                                                            matching_candidates = [candidate, second_candidate]
-                                                        else:
-                                                            pass
-                                                if candidate_match_count == 1:
-                                                    pair_match_count += 1
-                                                    pair_match_position = [r, c]
-                                                    if pair_match_count > 1:
-                                                        found_hidden_pair = False
-                                                        matching_candidates = []
-                                                    else:
-                                                        found_hidden_pair = True
-                                            else:
-                                                pass
-                    if found_hidden_pair:
-                        # If hidden pair, remove all other candidates from the pair squares
-                        for element in starting_square:
-                            if element not in matching_candidates:
-                                starting_square.remove(element)
-                                print("HIDDEN Grid removed", element, " from: ", starting_grid_checker, " left with: ", starting_square)
-                        for element in base[pair_match_position[0]][pair_match_position[1]]:
-                            if element not in matching_candidates:
-                                base[pair_match_position[0]][pair_match_position[1]].remove(element)
-                                print("HIDDEN Grid2 removed", element, " from: ", pair_match_position, " Left with:",
-                                      base[pair_match_position[0]][pair_match_position[1]])
-                        found_hidden_pair = False
-
-
 def check_empty_squares(filled_squares):
     # Pick a square (that contains a list)
     for row in range(0, 9):
@@ -626,9 +514,9 @@ def check_empty_squares(filled_squares):
                         # Success! return 1
                         return 1
                 # Call a function to deal with matching sets of 2 or 3 values in the same G and R/C
-                if len(base[row][column]) == 2:
+                #if len(base[row][column]) == 2:
                     # Check for matching sets
-                    naked_pairs(row, column)
+                    #naked_pairs(row, column)
 
     return 0
 
