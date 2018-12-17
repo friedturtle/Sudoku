@@ -24,6 +24,50 @@ def choose_puzzle(number):
             row_num += 1
     return confirmed, puzzleno
 
+def sweep_house(elements, position, exceptions, mode):
+
+    # For row and column mode position is a len = 1 integer list and exceptions is lists of integers (0 - 8)
+    if mode == "row" or "column":
+        for i in range(0, 9):
+            if i not in exceptions:
+                for element in elements:
+                    if mode == "row":
+                        current_square = base[position[0]][i]
+                    elif mode == "column":
+                        current_square = base[i][position[0]]
+                    else:
+                        return 1
+
+                    if isinstance(current_square, list) and element in current_square:
+                        current_square.remove(element)
+
+    # For grid mode position is a len = 2 list and exceptions is a list of len = 2 lists
+    elif mode == "grid":
+        grid_checker = position
+        for m in range(0, 2):
+            while grid_checker[m] % 3 != 0:
+                grid_checker[m] -= 1
+        grid_corner = grid_checker[:]
+        for s in range(0, 3):
+            for k in range(0, 3):
+                grid_checker = [grid_corner[0] + s, grid_corner[1] + k]
+                current_square = base[grid_checker[0]][grid_checker[1]]
+                if grid_checker not in exceptions:
+                    if isinstance(current_square, list):
+                        for element in elements:
+                            if element in current_square:
+                                current_square.remove(element)
+    else:
+        return 1
+
+
+
+
+
+
+
+
+
 
 def solve_puzzle(solved_squares):
     # Solve the puzzle
@@ -278,7 +322,7 @@ def reverse_elimination(r, c, element):
 
 def naked_sets():
     # Check the entire base for naked pairs, triples and quads
-    # This doesnt account for disjointed naked sets
+    # This doesnt account for disjointed naked triples and quads
     # Check rows
     for i in range(0, 9):
         # Store the positions where the number of candidates is 4,3,2
@@ -398,6 +442,230 @@ def naked_sets():
                         match_count = 0
 
 
+def new_naked_sets():
+    # Rows
+    for i in range(0, 9):
+        # Store the positions where the number of candidates is 2,3,4
+        pos_of_lengths = [[], [], []]
+        for k in range(0, 9):
+            if isinstance(base[i][k], list) and 2 <= len(base[i][k]) <= 4:
+                number_candidates = len(base[i][k])
+                # To assign to correct index idx = - length + 4
+                length_index = number_candidates - 2
+                pos_of_lengths[length_index].append(k)
+        # Now we have the positions of squares with lengths 2,3,4 in pos of lengths
+        # Start by looking for naked pairs then triples then quads
+        for set_length in range(2, 5):
+            if set_length == 2:
+                # Naked pairs so exact matches
+                length_index = set_length - 2
+                sets_already_tested = []
+                number_sets = len(pos_of_lengths[length_index])
+                for test_set_pos_idx in range(0, number_sets):
+                    match_count = 0
+                    test_set_pos = pos_of_lengths[length_index][test_set_pos_idx]
+                    test_set = base[i][test_set_pos][:]
+                    if test_set not in sets_already_tested:
+                        sets_already_tested.append(test_set)
+                        for compare_set_pos_idx in range(test_set_pos_idx, number_sets):
+                            compare_set_pos = pos_of_lengths[length_index][compare_set_pos_idx]
+                            compare_set = base[i][compare_set_pos]
+                            if test_set == compare_set:
+                                match_count +=1
+                        if match_count == set_length - 1:
+                            for k in range(0, 9):
+                                if isinstance(base[i][k], list) and base[i][k] != test_set:
+                                    for candidate in test_set:
+                                        if candidate in base[i][k]:
+                                            if 2 <= len(base[i][k]) <= 4:
+                                                pos_of_lengths[len(base[i][k]) - 2].remove(k)
+                                                if len(base[i][k]) > 2:
+                                                    pos_of_lengths[len(base[i][k]) - 3].append(k)
+                                            base[i][k].remove(candidate)
+                                            if len(base[i][k]) == 4:
+                                                pos_of_lengths[2].append(k)
+                                            print("NAKED row removed", candidate, "from", [i, k], "left with",
+                                                  base[i][k])
+                                            print(pos_of_lengths)
+
+            # Naked pairs are handled. Now in to naked triples and quads.
+            elif set_length == 3:
+                # Set length = 3 then = 4
+                # For length = 3 our test sets will come from len 3 and then len = 2 after
+                # Our compare sets will come from len = 3 (exact) and then len = 2 (subsets) Done!
+                length_index = set_length - 2
+                sets_already_tested = []
+                number_sets = len(pos_of_lengths[length_index])
+                for test_set_pos_idx in range(0, number_sets):
+                    match_count = 0
+                    test_set_pos = pos_of_lengths[length_index][test_set_pos_idx]
+                    test_set = base[i][test_set_pos][:]
+                    if test_set not in sets_already_tested:
+                        sets_already_tested.append(test_set)
+                        for compare_set_pos_idx in range(test_set_pos_idx, number_sets):
+                            compare_set_pos = pos_of_lengths[length_index][compare_set_pos_idx]
+                            compare_set = base[i][compare_set_pos]
+                            if test_set == compare_set:
+                                match_count += 1
+                        if match_count == set_length - 1:
+                            # We have an exact match naked triple. Its enough to stop here and sweep
+                            # Need a function to call for sweeping!
+                            # CAREFUL WITH CONDITIONS
+                            for k in range(0, 9):
+                                if isinstance(base[i][k], list) and base[i][k] != test_set:
+                                    for candidate in test_set:
+                                        if candidate in base[i][k]:
+                                            if 2 <= len(base[i][k]) <= 4:
+                                                pos_of_lengths[len(base[i][k]) - 2].remove(k)
+                                                if len(base[i][k]) > 2:
+                                                    pos_of_lengths[len(base[i][k]) - 3].append(k)
+                                            base[i][k].remove(candidate)
+                                            if len(base[i][k]) == 4:
+                                                pos_of_lengths[2].append(k)
+                                            print("NAKED row removed", candidate, "from", [i, k], "left with",
+                                                  base[i][k])
+                                            print(pos_of_lengths)
+                        else:
+                            # Otherwise consider the len = 2 squares an determine if their elements are in the test set
+                            number_sets = len(pos_of_lengths[length_index - 1])
+                            for compare_set_pos_idx in range(0, number_sets):
+                                compare_set_pos = pos_of_lengths[length_index - 1][compare_set_pos_idx]
+                                compare_set = base[i][compare_set_pos]
+                                is_compare_set_contained = True
+                                for compare_set_element in compare_set:
+                                    if compare_set_element in test_set:
+                                        pass
+                                    else:
+                                        is_compare_set_contained = False
+                                if is_compare_set_contained:
+                                    match_count += 1
+                            if match_count == set_length - 1:
+                                # Sweep! Be careful with conditions here!
+                                for k in range(0, 9):
+                                    is_naked_set_contained = True
+                                    for element in base[i][k]:
+                                        if element in test_set:
+                                            pass
+                                        else:
+                                            is_naked_set_contained = False
+                                    if not is_naked_set_contained:
+                                        for candidate in test_set:
+                                            if candidate in base[i][k]:
+                                                if 2 <= len(base[i][k]) <= 4:
+                                                    pos_of_lengths[len(base[i][k]) - 2].remove(k)
+                                                    if len(base[i][k]) > 2:
+                                                        pos_of_lengths[len(base[i][k]) - 3].append(k)
+                                                base[i][k].remove(candidate)
+                                                if len(base[i][k]) == 4:
+                                                    pos_of_lengths[2].append(k)
+                                                print("NAKED row removed", candidate, "from", [i, k], "left with",
+                                                      base[i][k])
+                                                print(pos_of_lengths)
+
+                # Finally consider naked triples where each square only contains 2 elements.
+                # The test set is formed from len = 2 squares and one extra element
+                # The comparison sets are the rest of the len = 2 squares
+                # This may be intensive so only try if there are enough len = 2 squares to form a triple (3)
+                # If at any point there are no longer enough squares to for a triple then STOP
+                # Are sets already tested still useful here? YES?
+                length_index = set_length - 3
+                number_sets = len(pos_of_lengths[length_index])
+                sets_remaining = number_sets
+                if number_sets >= 3:
+                    for test_set_pos_idx in range(0, number_sets):
+                        match_count = 0
+                        test_set_pos = pos_of_lengths[length_index][test_set_pos_idx]
+                        # Test set MUST be a COPY because we will be editing it.
+                        test_set = base[i][test_set_pos][:]
+                        if test_set not in sets_already_tested:
+                            for compare_set_pos_idx in range(test_set_pos_idx, number_sets):
+                                compare_set_pos = pos_of_lengths[length_index][compare_set_pos_idx]
+                                compare_set = base[i][compare_set_pos]
+                                # Now look for a single element match to the test set
+                                # Add the remaining element to the test set to form a triple and use this to compare.
+                                # We wont get an exact match as this was handled by naked pairs
+                                is_single_element_match = False
+                                if len(test_set) == 2:
+                                    for compare_set_element in compare_set:
+                                        if compare_set_element in test_set:
+                                            is_single_element_match = True
+                                        else:
+                                            leftover_element = compare_set_element
+                                    if is_single_element_match:
+                                        test_set.append(leftover_element)
+                                        # We have formed our 3 element test set, now compare!
+                                        # Looking for one more square that matches the set!
+                                        match_count += 1
+                                else:
+                                    # Full test set already, check if its used already
+                                    if test_set not in sets_already_tested:
+                                        sets_already_tested.append(test_set)
+                                        is_compare_set_contained = True
+                                        for compare_set_element in compare_set:
+                                            if compare_set_element in test_set:
+                                                pass
+                                            else:
+                                                is_compare_set_contained = False
+                                        if is_compare_set_contained:
+                                            match_count += 1
+                                    if match_count == set_length - 1:
+                                        # We have a naked triple! Sweep the row!
+                                        for k in range(0, 9):
+                                            is_naked_set_contained = True
+                                            for element in base[i][k]:
+                                                if element in test_set:
+                                                    pass
+                                                else:
+                                                    is_naked_set_contained = False
+                                            if not is_naked_set_contained:
+                                                for candidate in test_set:
+                                                    if candidate in base[i][k]:
+                                                        if 2 <= len(base[i][k]) <= 4:
+                                                            pos_of_lengths[len(base[i][k]) - 2].remove(k)
+                                                            if len(base[i][k]) > 2:
+                                                                pos_of_lengths[len(base[i][k]) - 3].append(k)
+                                                        base[i][k].remove(candidate)
+                                                        if len(base[i][k]) == 4:
+                                                            pos_of_lengths[2].append(k)
+                                                        print("NAKED row removed", candidate, "from", [i, k],
+                                                              "left with",
+                                                              base[i][k])
+                                                        print(pos_of_lengths)
+                                    # If we dont have a triple we continue to the next compare square
+                                    # When we reach the end if we dont have a triple with this test set
+                                    # We need to create a new one
+                                    # Go back and start over by looking for the next single element match
+                                    # While loop?
+                                    # While no match with this set - do everything...?
+
+
+
+
+                                    # If we dont get a triple with this set we need to pop the leftover element we added
+                                    # Then go back and look for another single element match and create a new test set
+                                    # BEFORE We move on to a new starting test square!
+                                    # But we do want to move on to a new compare set.
+
+                    sets_remaining -= 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def hidden_pairs():
     # Check each row of the base for hidden pairs
     for i in range(0, 9):
@@ -513,17 +781,8 @@ def check_empty_squares(filled_squares):
                         print("Reverse Elimination Filled", (row, column), "With: ", possibility)
                         # Success! return 1
                         return 1
-                # Call a function to deal with matching sets of 2 or 3 values in the same G and R/C
-                #if len(base[row][column]) == 2:
-                    # Check for matching sets
-                    #naked_pairs(row, column)
 
     return 0
-
-
-
-
-
 
 
 def user_puzzle():
